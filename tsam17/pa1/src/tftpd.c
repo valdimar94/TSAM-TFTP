@@ -29,7 +29,12 @@ int main(int argc, char *argv[])
 	server.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	// bind socket to a name with err check
-	bind(socket_file_descriptor, (struct sockaddr *) &server, (socklen_t) sizeof(server));
+	int x = bind(socket_file_descriptor, (struct sockaddr *) &server, (socklen_t) sizeof(server));
+
+	if (x < 0) {
+		printf("Could not bind man.... soorry man");
+		return 0;
+	}
 
 	while(1){
 		socklen_t len = (socklen_t) sizeof(client);
@@ -38,7 +43,14 @@ int main(int argc, char *argv[])
         message[n] = '\0';
 	printf("%d ", message[1]);
         if (message[1] == 1){
-		// Opcode was RRQ
+		
+		//char* file_name = message[3];
+		for (int i = 0; i < n; i++) {
+		
+			printf("%d", message[i]);
+		}
+		printf("%s", message);	
+	// Opcode was RRQ
 	}
 	else{
 		printf("Ohhhhh, now you fucked uup!");
