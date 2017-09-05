@@ -37,7 +37,12 @@ int main(int argc, char *argv[])
 
         message[n] = '\0';
 	printf("%d ", message[1]);
-        // fprintf(stdout, "Received:\n%s\n", message[1]);
+        if (message[1] == 1){
+		// Opcode was RRQ
+	}
+	else{
+		printf("Ohhhhh, now you fucked uup!");
+	}
         fflush(stdout);
 
         sendto(socket_file_descriptor, message, (size_t) n, 0, (struct sockaddr *) &client, len);
