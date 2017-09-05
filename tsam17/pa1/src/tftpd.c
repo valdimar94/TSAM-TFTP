@@ -7,8 +7,9 @@
 #include <ctype.h>
 #include <stdio.h>
 
-int main()
+int main(int argc, char *argv[])
 {
+	int port_nr = argc;
 	int socket_file_descriptor;
 	struct sockaddr_in server, client;
 	char message[512];
@@ -23,7 +24,7 @@ int main()
 	// the htons and htonl convert host byte order to network byte order
 	// sin_port is stored as short, so htons is used
 	// any port below 1024 requires superuser access so not sure what to do to test port 69?
-	server.sin_port = htons(6969);
+	server.sin_port = htons(port_nr);
 	// s_addr is stored as long so htonl is used
 	server.sin_addr.s_addr = htonl(INADDR_ANY);
 
@@ -32,15 +33,13 @@ int main()
 
 	while(1){
 		socklen_t len = (socklen_t) sizeof(client);
-        ssize_t n = recvfrom(socket_file_descriptor, message, sizeof(message) - 1,
-                             0, (struct sockaddr *) &client, &len);
+        ssize_t n = recvfrom(socket_file_descriptor, message, sizeof(message) - 1, 0, (struct sockaddr *) &client, &len);
 
         message[n] = '\0';
         fprintf(stdout, "Received:\n%s\n", message);
         fflush(stdout);
 
-        sendto(socket_file_descriptor, message, (size_t) n, 0,
-               (struct sockaddr *) &client, len);
+        sendto(socket_file_descriptor, message, (size_t) n, 0, (struct sockaddr *) &client, len);
 	}
 
 	return 0;
