@@ -8,13 +8,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define RRQ 1
+
+
 int main(int argc, char *argv[])
 {
 	int port_nr = argc;
 	int socket_file_descriptor;
 	struct sockaddr_in server, client;
 	char message[512];
-
+	
 	socket_file_descriptor = socket(AF_INET, SOCK_DGRAM, 0);
 
 	if (socket_file_descriptor < 0)
@@ -31,34 +34,46 @@ int main(int argc, char *argv[])
 
 	// bind socket to a name with err check
 	int x = bind(socket_file_descriptor, (struct sockaddr *) &server, (socklen_t) sizeof(server));
-
+	// IF PORT IS IN USE
 	if (x < 0) {
 		printf("Could not bind man.... soorry man");
 		return 0;
 	}
-
+	
 	while(1){
 		socklen_t len = (socklen_t) sizeof(client);
         ssize_t n = recvfrom(socket_file_descriptor, message, sizeof(message) - 1, 0, (struct sockaddr *) &client, &len);
-
-        message[n] = '\0';
-	printf("%d ", message[1]);
-        if (message[1] == 1){
-		
+	
+        //message[n] = '\0';
+	//printf("%d ", message[1]);
+        
+	// the second byte in the array contains the Opcode
+	if (message[1] == RRQ)
+	{	
+		// We jump to over the first two bytes to get the filename
 		char* file_name = message + 2;
-
+		// Length of given file name
 		size_t f_n_length = strlen(file_name);
-
 		printf("%s\n", file_name);
 		
-		return 0;
-	
-		for (int i = 0; i < n; i++) {
+		// Jump over opcode, filename and null terminator to get the mode of transfer.
+		char *mode = message + f_n_length + 3;
+		printf("%s\n", mode);
 		
-			printf("%d\n", message[i]);
-		}
-		printf("%s", message);	
-	// Opcode was RRQ
+		// TEST:::
+		size_t argv_length = strlen(argv[2]);
+		
+		// Initialize array for data path
+		char full_path[argv_length + f_n_length + 2];
+		
+		strcpy(full_path, "lalala");
+		//strcpy(full_path, file_name);
+
+		printf("%d\n", argv_length);
+
+		fprintf(stdout, "Path: %s\n", full_path); fflush(stdout);
+		
+				
 	}
 	else{
 		printf("Ohhhhh, now you fucked uup!");
