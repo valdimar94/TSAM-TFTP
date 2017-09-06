@@ -70,6 +70,60 @@ int main(int argc, char *argv[])
 		strcpy(full_path + argv_length + 1, file_name);
 
 		fprintf(stdout, "Path: %s\n", full_path); fflush(stdout);
+
+		FILE *file;
+		file = fopen(full_path, "r");
+
+		if (file == NULL)
+		{
+			printf("File does not exist, need to send msg to client!");
+		}
+		// Keep track of length of file
+		fseek(file, 0, SEEK_END);
+		size_t file_size = ftell(file);
+		// Go back to the beginning of the file
+		fseek(file, 0, SEEK_SET);
+
+		int curr_file_size;
+		char buffer[512];
+		memset(buffer, 0, sizeof buffer);
+
+		while(1)
+		{
+			int retry_attempts = 5;
+			// read from current pointer in file to buffer
+			curr_file_size = fread(buffer, 1, sizeof buffer, file);
+
+			// file is empty
+			if (curr_file_size <= 0)
+			{
+				break;
+			}
+			while(--retry_attempts)
+			{
+				int return_code = sendto(socket_file_descriptor, buffer, strlen(buffer), 0, (struct sockaddr *) &client, len);
+
+				if(return_code < 0)
+				{
+					printf("Error sending message");
+				}
+				int ack_return_code = recvfrom(socket_file_descriptor, buffer, 512, 0, (struct sockaddr *) &client, &len);
+
+				if(ack_return_code < 0)
+				{
+					printf("Error with sent message");
+				}
+				else
+				{
+					break;
+				}
+			}
+
+			if (curr_file_size <= 0)
+			{
+				break;
+			}
+		}
 	}
 	else{
 		printf("Ohhhhh, now you fucked uup!");
