@@ -6,6 +6,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 int main(int argc, char *argv[])
 {
@@ -24,7 +25,7 @@ int main(int argc, char *argv[])
 	// the htons and htonl convert host byte order to network byte order
 	// sin_port is stored as short, so htons is used
 	// any port below 1024 requires superuser access so not sure what to do to test port 69?
-	server.sin_port = htons(32000);
+	server.sin_port = htons(32001);
 	// s_addr is stored as long so htonl is used
 	server.sin_addr.s_addr = htonl(INADDR_ANY);
 
@@ -44,10 +45,17 @@ int main(int argc, char *argv[])
 	printf("%d ", message[1]);
         if (message[1] == 1){
 		
-		//char* file_name = message[3];
+		char* file_name = message + 2;
+
+		size_t f_n_length = strlen(file_name);
+
+		printf("%s\n", file_name);
+		
+		return 0;
+	
 		for (int i = 0; i < n; i++) {
 		
-			printf("%d", message[i]);
+			printf("%d\n", message[i]);
 		}
 		printf("%s", message);	
 	// Opcode was RRQ
