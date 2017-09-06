@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
 			int retry_attempts = 5;
 			// read from current pointer in file to buffer
 			curr_file_size = fread(buffer, 1, sizeof buffer, file);
-
+			printf("%s\n", buffer);
 			// file is empty
 			if (curr_file_size <= 0)
 			{
@@ -115,6 +115,8 @@ int main(int argc, char *argv[])
 				}
 				else
 				{
+					printf("Printing buffer");
+					printf("%s\n", buffer);
 					break;
 				}
 			}
@@ -130,7 +132,7 @@ int main(int argc, char *argv[])
 	}
         fflush(stdout);
 
-        sendto(socket_file_descriptor, message, (size_t) n, 0, (struct sockaddr *) &client, len);
+        //sendto(socket_file_descriptor, message, (size_t) n, 0, (struct sockaddr *) &client, len);
 	}
 
 	return 0;
