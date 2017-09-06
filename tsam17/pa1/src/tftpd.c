@@ -87,17 +87,18 @@ int main(int argc, char *argv[])
 		int curr_file_size;
 		char buffer[512];
 		memset(buffer, 0, sizeof buffer);
-
+		int break_next = 0;
 		while(1)
 		{
 			int retry_attempts = 5;
+			memset(buffer, 0, sizeof buffer);
 			// read from current pointer in file to buffer
 			curr_file_size = fread(buffer, 1, sizeof buffer, file);
 			printf("%s\n", buffer);
 			// file is empty
 			if (curr_file_size <= 0)
 			{
-				break;
+				break_next = 1;
 			}
 			while(--retry_attempts)
 			{
@@ -121,7 +122,7 @@ int main(int argc, char *argv[])
 				}
 			}
 
-			if (curr_file_size <= 0)
+			if (break_next == 1)
 			{
 				break;
 			}
