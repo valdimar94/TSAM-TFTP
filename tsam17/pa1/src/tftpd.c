@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
 				else
 				{
 					printf("Printing buffer");
-					printf("%s\n", buffer);
+					printf("%d\n", buffer);
 					break;
 				}
 			}
