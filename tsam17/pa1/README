@@ -1,1 +1,35 @@
-Update this.
+## structure
+
+First bind port given from command line to localhost port
+
+Wait indefinitely for something to arrive from a client
+
+Check if first two bytes of message from client contain the RRQ status code and if so:
+
+    Split client message into file_name and mode
+
+    construct full path to file given the data folder argument and client request. If request from client contains backslash, deny it with ERROR pack
+
+    If file doesn't exist, send ERROR to client
+
+    If it does exist, open a file stream.
+
+    For each data pack(block) sent back to client:
+
+        Construct the block that will be sent back to client with the appropriate opcode and block #
+
+        send to client the message, and await response
+
+        If all is ok, we receive ACK pack so the sending of packs continues.
+
+If first two bytes indicate WRQ:
+
+    Send error message back to client
+
+When transfer is complete, the server waits for another client until prompted to close(ctrl c)
+
+
+## known issues
+
+Modes are currently not being handled.
+Images like example_data3 are not being handled correctly.

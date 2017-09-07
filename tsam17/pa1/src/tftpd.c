@@ -25,6 +25,18 @@ void print_client_origin(struct sockaddr_in client, char* file_name)
 	printf("%d\n", client_port);
 }
 
+void print_error(int error_value, int socket_file_descriptor, struct sockaddr_in client, socklen_t len)
+{
+	char full_message[512];
+	memset(full_message, 0, sizeof full_message);
+	full_message[0] = 0;
+	full_message[1] = 5;
+	full_message[2] = 0;
+	full_message[3] = error_value;
+	strcpy(full_message + 4, "Access violation.\0");
+	sendto(socket_file_descriptor, full_message, 512, 0, (struct sockaddr *)&client, len);
+}
+
 int main(int argc, char *argv[])
 {
 	int socket_file_descriptor;
@@ -40,7 +52,7 @@ int main(int argc, char *argv[])
 	server.sin_family = AF_INET;
 	// the htons and htonl convert host byte order to network byte order
 	// sin_port is stored as short, so htons is used
-	server.sin_port = htons(atoi(argv[1]));
+	server.sin_port = htons(atoi(argv[argc - 2]));
 	// s_addr is stored as long so htonl is used
 	server.sin_addr.s_addr = htonl(INADDR_ANY);
 
@@ -57,6 +69,11 @@ int main(int argc, char *argv[])
 		socklen_t len = (socklen_t)sizeof(client);
 		ssize_t n = recvfrom(socket_file_descriptor, message, sizeof(message) - 1, 0, (struct sockaddr *)&client, &len);
 
+		if (n < 0)
+		{
+			printf("Something went wrong\n");
+		}
+
 		// the second byte in the array contains the Opcode
 		if (message[1] == RRQ)
 		{
@@ -69,7 +86,8 @@ int main(int argc, char *argv[])
 			print_client_origin(client, file_name);
 
 			// Jump over opcode, filename and null terminator to get the mode of transfer.
-			char *mode = message + f_n_length + 3;
+			// char *mode = message + f_n_length + 3;
+			// mode not implemented
 
 			size_t argv_length = strlen(argv[2]);
 
@@ -81,9 +99,19 @@ int main(int argc, char *argv[])
 			strcpy(full_path + argv_length, "/");
 			strcpy(full_path + argv_length + 1, file_name);
 
-			// open file from location
 			FILE *file;
-			file = fopen(full_path, "r");
+
+			// if name from client contains a slash, deny that access
+			if (strchr(file_name, '/') != NULL)
+			{
+				print_error(2, socket_file_descriptor, client, len);
+				file = NULL;
+			}
+			else
+			{
+				// open file from location
+				file = fopen(full_path, "r");
+			}
 
 			if (file == NULL)
 			{
@@ -100,7 +128,6 @@ int main(int argc, char *argv[])
 			{
 				// Keep track of length of file
 				fseek(file, 0, SEEK_END);
-				size_t file_size = ftell(file);
 				// Go back to the beginning of the file
 				fseek(file, 0, SEEK_SET);
 
@@ -167,7 +194,7 @@ int main(int argc, char *argv[])
 			full_message[2] = 0;
 			full_message[3] = 2;
 			strcpy(full_message + 4, "Access violation.\0");
-			ssize_t return_code = sendto(socket_file_descriptor, full_message, 512, 0, (struct sockaddr *)&client, len);
+			sendto(socket_file_descriptor, full_message, 512, 0, (struct sockaddr *)&client, len);
 		}
 		fflush(stdout);
 	}
