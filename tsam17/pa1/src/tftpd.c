@@ -137,21 +137,21 @@ int main(int argc, char *argv[])
 				}
 				while (--retry_attempts)
 				{
-					int return_code = sendto(socket_file_descriptor, full_message, strlen(full_message), 0, (struct sockaddr *)&client, len);
+					ssize_t return_code = sendto(socket_file_descriptor, full_message, curr_file_size + 4, 0, (struct sockaddr *)&client, len);
 					printf("Return Code: %d\n", return_code);
 					if (return_code < 0)
 					{
 						printf("Error sending message");
 					}
-					int ack_return_code = recvfrom(socket_file_descriptor, message, strlen(message), 0, (struct sockaddr *)&client, &len);
-					printf("%d\n", ack_return_code);
+					ssize_t ack_return_code = recvfrom(socket_file_descriptor, message, strlen(message), 0, (struct sockaddr *)&client, &len);
+					// printf("%d\n", ack_return_code);
 					if (ack_return_code < 0)
 					{
 						printf("Error with sent message");
 					}
 					else
 					{
-						printf("Printing buffer");
+						printf("Printing return opcode:");
 						printf("%d\n", message[1]);
 						break;
 					}
@@ -161,7 +161,13 @@ int main(int argc, char *argv[])
 				{
 					break;
 				}
+				if (curr_file_size < 512)
+				{
+					//memset(full_message, 0, curr_file_size);
+					//break_next = 1;
+				}
 			}
+			printf("Done sending or smt");
 		}
 		else
 		{
