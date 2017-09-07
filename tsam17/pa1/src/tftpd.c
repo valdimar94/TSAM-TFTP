@@ -14,6 +14,17 @@
 #define ACK   4
 #define ERROR 5
 
+void print_client_origin(struct sockaddr_in client, char* file_name)
+{
+	int client_port = ntohs(client.sin_port);
+	unsigned char *client_ip = (unsigned char *)&client.sin_addr.s_addr;
+
+	printf("file name \"%s", file_name);
+	printf("\" requested from ");
+	printf("%d.%d.%d.%d:", client_ip[0], client_ip[1], client_ip[2], client_ip[3]);
+	printf("%d\n", client_port);
+}
+
 int main(int argc, char *argv[])
 {
 	int socket_file_descriptor;
@@ -55,13 +66,7 @@ int main(int argc, char *argv[])
 			size_t f_n_length = strlen(file_name);
 
 			// get client port and ip, print alongside file name requested
-			int client_port = ntohs(client.sin_port);
-			unsigned char *client_ip = (unsigned char *)&client.sin_addr.s_addr;
-
-			printf("file name \"%s", file_name);
-			printf("\" requested from ");
-			printf("%d.%d.%d.%d:", client_ip[0], client_ip[1], client_ip[2], client_ip[3]);
-			printf("%d\n", client_port);
+			print_client_origin(client, file_name);
 
 			// Jump over opcode, filename and null terminator to get the mode of transfer.
 			char *mode = message + f_n_length + 3;
@@ -82,63 +87,74 @@ int main(int argc, char *argv[])
 
 			if (file == NULL)
 			{
-				printf("File does not exist, need to send msg to client!");
-			}
-			// Keep track of length of file
-			fseek(file, 0, SEEK_END);
-			size_t file_size = ftell(file);
-			// Go back to the beginning of the file
-			fseek(file, 0, SEEK_SET);
-
-			int curr_file_size;
-			char full_message[516];
-			int break_next = 0;
-			unsigned short package_nr = 1;
-			while (1)
-			{
-				int retry_attempts = 5;
+				char full_message[512];
 				memset(full_message, 0, sizeof full_message);
-				memset(message, 0, sizeof message);
-				// construct data pack that will be sent to client
 				full_message[0] = 0;
-				full_message[1] = 3;
-				full_message[2] = package_nr >> 8;
-				full_message[3] = package_nr;
-				curr_file_size = fread(full_message + 4, 1, 512, file);
+				full_message[1] = 5;
+				full_message[2] = 0;
+				full_message[3] = 1;
+				strcpy(full_message + 4, "File not found.\0");
+				sendto(socket_file_descriptor, full_message, 512, 0, (struct sockaddr *)&client, len);
+			}
+			else
+			{
+				// Keep track of length of file
+				fseek(file, 0, SEEK_END);
+				size_t file_size = ftell(file);
+				// Go back to the beginning of the file
+				fseek(file, 0, SEEK_SET);
 
-				// if file is empty, then last message is sent
-				if (curr_file_size <= 0)
+				int curr_file_size;
+				char full_message[516];
+				int break_next = 0;
+				unsigned short package_nr = 1;
+				while (1)
 				{
-					break_next = 1;
-				}
-				// send to and receive from client
-				while (--retry_attempts)
-				{
-					ssize_t return_code = sendto(socket_file_descriptor, full_message, curr_file_size + 4, 0, (struct sockaddr *)&client, len);
+					int retry_attempts = 5;
+					memset(full_message, 0, sizeof full_message);
+					memset(message, 0, sizeof message);
+					// construct data pack that will be sent to client
+					full_message[0] = 0;
+					full_message[1] = 3;
+					full_message[2] = package_nr >> 8;
+					full_message[3] = package_nr;
+					curr_file_size = fread(full_message + 4, 1, 512, file);
 
-					if (return_code < 0)
+					// if file is (near) empty, then last message is sent
+					if (curr_file_size < 512)
 					{
-						printf("Error sending message");
+						break_next = 1;
 					}
-					ssize_t ack_return_code = recvfrom(socket_file_descriptor, &message, sizeof(message), 0, (struct sockaddr *)&client, &len);
+					// send to and receive from client
+					while (--retry_attempts)
+					{
+						ssize_t return_code = sendto(socket_file_descriptor, full_message, curr_file_size + 4, 0, (struct sockaddr *)&client, len);
 
-					if (ack_return_code < 0)
-					{
-						printf("Error with sent message");
+						if (return_code < 0)
+						{
+							printf("Error sending message");
+						}
+						ssize_t ack_return_code = recvfrom(socket_file_descriptor, &message, sizeof(message), 0, (struct sockaddr *)&client, &len);
+
+						if (ack_return_code < 0)
+						{
+							printf("Error with sent message");
+						}
+						else if (message[1] == ACK)
+						{
+							// nothing went wrong so pack was successfully sent
+							package_nr++;
+							break;
+						}
 					}
-					else if (message[1] == ACK)
+
+					if (break_next == 1)
 					{
-						// nothing went wrong so pack was successfully sent
-						package_nr++;
 						break;
 					}
 				}
-
-				if (break_next == 1)
-				{
-					break;
-				}
 			}
+
 		}
 		// Handle write request denial
 		else if (message[1] == WRQ)
@@ -149,7 +165,7 @@ int main(int argc, char *argv[])
 			full_message[0] = 0;
 			full_message[1] = 5;
 			full_message[2] = 0;
-			full_message[3] = 3;
+			full_message[3] = 2;
 			strcpy(full_message + 4, "Access violation.\0");
 			ssize_t return_code = sendto(socket_file_descriptor, full_message, 512, 0, (struct sockaddr *)&client, len);
 		}
