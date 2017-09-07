@@ -10,7 +10,6 @@
 
 #define RRQ 1
 
-
 int main(int argc, char *argv[])
 {
 	int port_nr = argc;
@@ -33,129 +32,128 @@ int main(int argc, char *argv[])
 	server.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	// bind socket to a name with err check
-	int x = bind(socket_file_descriptor, (struct sockaddr *) &server, (socklen_t) sizeof(server));
-	// IF PORT IS IN USE
-	if (x < 0) {
-		printf("Could not bind man.... soorry man");
+	if (bind(socket_file_descriptor, (struct sockaddr *)&server, (socklen_t)sizeof(server)) < 0) 
+	{
+		// IF PORT IS IN USE
+		printf("Could not bind to port");
 		return 0;
 	}
 
-	while(1){
-		socklen_t len = (socklen_t) sizeof(client);
-        ssize_t n = recvfrom(socket_file_descriptor, message, sizeof(message) - 1, 0, (struct sockaddr *) &client, &len);
-	if (message[1] == 2)
+	while (true)
 	{
-		printf("Opcode 2");
-	}
-	if (message[1] == 3)
-	{
-		printf("Opcode 3");
-	}
-	if (message[1] == 4)
-	{
-		printf("Opcode 4");
-	}
-	if (message[1] == 5)
-	{
-		printf("Opcode 5");
-	}
-	//message[n] = '\0';
-	//printf("%d ", message[1]);
-        // the second byte in the array contains the Opcode
-	if (message[1] == RRQ)
-	{
-		// We jump to over the first two bytes to get the filename
-		char* file_name = message + 2;
-		// Length of given file name
-		size_t f_n_length = strlen(file_name);
-		printf("%s\n", file_name);
-
-		// Jump over opcode, filename and null terminator to get the mode of transfer.
-		char *mode = message + f_n_length + 3;
-		printf("%s\n", mode);
-
-		// TEST:::
-		size_t argv_length = strlen(argv[2]);
-
-		// Initialize array for data path
-		char full_path[argv_length + f_n_length + 2];
-
-		strcpy(full_path, argv[2]);
-		strcpy(full_path + argv_length, "/");
-		strcpy(full_path + argv_length + 1, file_name);
-
-		fprintf(stdout, "Path: %s\n", full_path); fflush(stdout);
-
-		FILE *file;
-		file = fopen(full_path, "r");
-
-		if (file == NULL)
+		socklen_t len = (socklen_t)sizeof(client);
+		ssize_t n = recvfrom(socket_file_descriptor, message, sizeof(message) - 1, 0, (struct sockaddr *)&client, &len);
+		if (message[1] == 2)
 		{
-			printf("File does not exist, need to send msg to client!");
+			printf("Opcode 2");
 		}
-		// Keep track of length of file
-		fseek(file, 0, SEEK_END);
-		size_t file_size = ftell(file);
-		// Go back to the beginning of the file
-		fseek(file, 0, SEEK_SET);
-
-		int curr_file_size;
-		char buffer[512];
-		char full_message[516];
-		memset(buffer, 0, sizeof buffer);
-		int break_next = 0;
-		int package_nr = 1;
-		while(1)
+		if (message[1] == 3)
 		{
-			int retry_attempts = 5;
-			memset(buffer, 0, sizeof buffer);
-			memset(full_message, 0, sizeof full_message);
-			// read from current pointer in file to buffer
-			curr_file_size = fread(buffer, 1, sizeof buffer, file);
-			strcpy(full_message, "010");
-			strcpy(full_message + 3, package_nr);
-			strcpy(full_message + 4, buffer);
+			printf("Opcode 3");
+		}
+		if (message[1] == 4)
+		{
+			printf("Opcode 4");
+		}
+		if (message[1] == 5)
+		{
+			printf("Opcode 5");
+		}
+		// the second byte in the array contains the Opcode
+		if (message[1] == RRQ)
+		{
+			// We jump to over the first two bytes to get the filename
+			char *file_name = message + 2;
+			// Length of given file name
+			size_t f_n_length = strlen(file_name);
+			printf("%s\n", file_name);
 
-			printf("%s\n", full_message);
-			// file is empty
-			if (curr_file_size <= 0)
+			// Jump over opcode, filename and null terminator to get the mode of transfer.
+			char *mode = message + f_n_length + 3;
+			printf("%s\n", mode);
+
+			// TEST:::
+			size_t argv_length = strlen(argv[2]);
+
+			// Initialize array for data path
+			char full_path[argv_length + f_n_length + 2];
+
+			strcpy(full_path, argv[2]);
+			strcpy(full_path + argv_length, "/");
+			strcpy(full_path + argv_length + 1, file_name);
+
+			fprintf(stdout, "Path: %s\n", full_path);
+			fflush(stdout);
+
+			FILE *file;
+			file = fopen(full_path, "r");
+
+			if (file == NULL)
 			{
-				break_next = 1;
+				printf("File does not exist, need to send msg to client!");
 			}
-			while(--retry_attempts)
+			// Keep track of length of file
+			fseek(file, 0, SEEK_END);
+			size_t file_size = ftell(file);
+			// Go back to the beginning of the file
+			fseek(file, 0, SEEK_SET);
+
+			int curr_file_size;
+			char buffer[512];
+			char full_message[516];
+			memset(buffer, 0, sizeof buffer);
+			int break_next = 0;
+			int package_nr = 1;
+			while (1)
 			{
-				int return_code = sendto(socket_file_descriptor, buffer, strlen(buffer), 0, (struct sockaddr *) &client, len);
+				int retry_attempts = 5;
+				memset(buffer, 0, sizeof buffer);
+				memset(full_message, 0, sizeof full_message);
+				// read from current pointer in file to buffer
+				curr_file_size = fread(buffer, 1, sizeof buffer, file);
+				strcpy(full_message, "010");
+				strcpy(full_message + 3, package_nr);
+				strcpy(full_message + 4, buffer);
 
-				if(return_code < 0)
+				printf("%s\n", full_message);
+				// file is empty
+				if (curr_file_size <= 0)
 				{
-					printf("Error sending message");
+					break_next = 1;
 				}
-				int ack_return_code = recvfrom(socket_file_descriptor, message, 512, 0, (struct sockaddr *) &client, &len);
+				while (--retry_attempts)
+				{
+					int return_code = sendto(socket_file_descriptor, buffer, strlen(buffer), 0, (struct sockaddr *)&client, len);
 
-				if(ack_return_code < 0)
-				{
-					printf("Error with sent message");
+					if (return_code < 0)
+					{
+						printf("Error sending message");
+					}
+					int ack_return_code = recvfrom(socket_file_descriptor, message, 512, 0, (struct sockaddr *)&client, &len);
+
+					if (ack_return_code < 0)
+					{
+						printf("Error with sent message");
+					}
+					else
+					{
+						printf("Printing buffer");
+						printf("%d\n", buffer);
+						break;
+					}
 				}
-				else
+
+				if (break_next == 1)
 				{
-					printf("Printing buffer");
-					printf("%d\n", buffer);
 					break;
 				}
 			}
-
-			if (break_next == 1)
-			{
-				break;
-			}
 		}
-	}
-	else{
-		printf("Ohhhhh, now you fucked uup!");
-	}
-        fflush(stdout);
-
-        //sendto(socket_file_descriptor, message, (size_t) n, 0, (struct sockaddr *) &client, len);
+		else
+		{
+			printf("Ohhhhh, now you fucked uup!");
+		}
+		fflush(stdout);
 	}
 
 	return 0;
