@@ -101,15 +101,22 @@ int main(int argc, char *argv[])
 
 		int curr_file_size;
 		char buffer[512];
+		char full_message[516];
 		memset(buffer, 0, sizeof buffer);
 		int break_next = 0;
+		int package_nr = 1;
 		while(1)
 		{
 			int retry_attempts = 5;
 			memset(buffer, 0, sizeof buffer);
+			memset(full_message, 0, sizeof full_message);
 			// read from current pointer in file to buffer
 			curr_file_size = fread(buffer, 1, sizeof buffer, file);
-			printf("%s\n", buffer);
+			strcpy(full_message, "010");
+			strcpy(full_message + 3, package_nr);
+			strcpy(full_message + 4, buffer);
+
+			printf("%s\n", full_message);
 			// file is empty
 			if (curr_file_size <= 0)
 			{
