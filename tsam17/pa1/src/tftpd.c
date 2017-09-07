@@ -43,7 +43,22 @@ int main(int argc, char *argv[])
 	while(1){
 		socklen_t len = (socklen_t) sizeof(client);
         ssize_t n = recvfrom(socket_file_descriptor, message, sizeof(message) - 1, 0, (struct sockaddr *) &client, &len);
-
+	if (message[1] == 2)
+	{
+		printf("Opcode 2");
+	}
+	if (message[1] == 3)
+	{
+		printf("Opcode 3");
+	}
+	if (message[1] == 4)
+	{
+		printf("Opcode 4");
+	}
+	if (message[1] == 5)
+	{
+		printf("Opcode 5");
+	}
 	//message[n] = '\0';
 	//printf("%d ", message[1]);
         // the second byte in the array contains the Opcode
@@ -108,7 +123,7 @@ int main(int argc, char *argv[])
 				{
 					printf("Error sending message");
 				}
-				int ack_return_code = recvfrom(socket_file_descriptor, buffer, 512, 0, (struct sockaddr *) &client, &len);
+				int ack_return_code = recvfrom(socket_file_descriptor, message, 512, 0, (struct sockaddr *) &client, &len);
 
 				if(ack_return_code < 0)
 				{
