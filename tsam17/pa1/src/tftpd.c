@@ -32,14 +32,14 @@ int main(int argc, char *argv[])
 	server.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	// bind socket to a name with err check
-	if (bind(socket_file_descriptor, (struct sockaddr *)&server, (socklen_t)sizeof(server)) < 0) 
+	if (bind(socket_file_descriptor, (struct sockaddr *)&server, (socklen_t)sizeof(server)) < 0)
 	{
 		// IF PORT IS IN USE
 		printf("Could not bind to port");
 		return 0;
 	}
 
-	while (true)
+	while (1)
 	{
 		socklen_t len = (socklen_t)sizeof(client);
 		ssize_t n = recvfrom(socket_file_descriptor, message, sizeof(message) - 1, 0, (struct sockaddr *)&client, &len);
@@ -103,19 +103,33 @@ int main(int argc, char *argv[])
 			char full_message[516];
 			memset(buffer, 0, sizeof buffer);
 			int break_next = 0;
-			int package_nr = 1;
+			unsigned short package_nr = 1;
 			while (1)
 			{
 				int retry_attempts = 5;
 				memset(buffer, 0, sizeof buffer);
 				memset(full_message, 0, sizeof full_message);
 				// read from current pointer in file to buffer
-				curr_file_size = fread(buffer, 1, sizeof buffer, file);
-				strcpy(full_message, "010");
-				strcpy(full_message + 3, package_nr);
-				strcpy(full_message + 4, buffer);
+				// char* file_content = buffer;
+				// strcpy(full_message, "0401");
+				// strcpy(full_message + 3, package_nr);
+				full_message[0] = 0;
+				full_message[1] = 3;
+				full_message[2] = package_nr >> 8;
+				full_message[3] = package_nr;
+				curr_file_size = fread(full_message + 4, 1, sizeof buffer, file);
+				// strcpy(full_message + 4, file_content);
+				package_nr++;
 
-				printf("%s\n", full_message);
+				printf("%d\n", full_message[1]);
+				printf("%d\n", full_message[3]);
+				printf("%s\n", full_message + 4);
+				//for (int i = 4; i < 100; i++)
+				//{
+					//printf("%s", full_message[i]);
+				//}
+				//fprintf(stdout, "Full Message: %s\n", full_message);
+				//fflush(stdout);
 				// file is empty
 				if (curr_file_size <= 0)
 				{
@@ -123,14 +137,14 @@ int main(int argc, char *argv[])
 				}
 				while (--retry_attempts)
 				{
-					int return_code = sendto(socket_file_descriptor, buffer, strlen(buffer), 0, (struct sockaddr *)&client, len);
-
+					int return_code = sendto(socket_file_descriptor, full_message, strlen(full_message), 0, (struct sockaddr *)&client, len);
+					printf("Return Code: %d\n", return_code);
 					if (return_code < 0)
 					{
 						printf("Error sending message");
 					}
-					int ack_return_code = recvfrom(socket_file_descriptor, message, 512, 0, (struct sockaddr *)&client, &len);
-
+					int ack_return_code = recvfrom(socket_file_descriptor, message, strlen(message), 0, (struct sockaddr *)&client, &len);
+					printf("%d\n", ack_return_code);
 					if (ack_return_code < 0)
 					{
 						printf("Error with sent message");
@@ -138,7 +152,7 @@ int main(int argc, char *argv[])
 					else
 					{
 						printf("Printing buffer");
-						printf("%d\n", buffer);
+						printf("%d\n", message[1]);
 						break;
 					}
 				}
