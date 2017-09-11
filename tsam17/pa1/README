@@ -28,8 +28,6 @@ If first two bytes indicate WRQ:
 
 When transfer is complete, the server waits for another client until prompted to close(ctrl c)
 
-
-## known issues
-
-Modes are currently not being handled.
-Images like example_data3 are not being handled correctly.
+Modes are not being handled on our end as that is not necessary, as that would only be needed if we were implementing WRQ, which we do not.
+Modes are implemented and handled on the clients end, so when requesting example_data3, an image, the user using the client needs to
+specify -m octet in his request.

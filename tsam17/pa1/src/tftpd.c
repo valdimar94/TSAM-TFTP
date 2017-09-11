@@ -25,7 +25,7 @@ void print_client_origin(struct sockaddr_in client, char* file_name)
 	printf("%d\n", client_port);
 }
 
-void print_error(int error_value, int socket_file_descriptor, struct sockaddr_in client, socklen_t len)
+void send_error_to_client(int error_value, int socket_file_descriptor, struct sockaddr_in client, socklen_t len, char* message)
 {
 	char full_message[512];
 	memset(full_message, 0, sizeof full_message);
@@ -33,7 +33,7 @@ void print_error(int error_value, int socket_file_descriptor, struct sockaddr_in
 	full_message[1] = 5;
 	full_message[2] = 0;
 	full_message[3] = error_value;
-	strcpy(full_message + 4, "Access violation.\0");
+	strcpy(full_message + 4, message);
 	sendto(socket_file_descriptor, full_message, 512, 0, (struct sockaddr *)&client, len);
 }
 
@@ -85,10 +85,6 @@ int main(int argc, char *argv[])
 			// get client port and ip, print alongside file name requested
 			print_client_origin(client, file_name);
 
-			// Jump over opcode, filename and null terminator to get the mode of transfer.
-			// char *mode = message + f_n_length + 3;
-			// mode not implemented
-
 			size_t argv_length = strlen(argv[2]);
 
 			// Initialize array for data path
@@ -100,11 +96,11 @@ int main(int argc, char *argv[])
 			strcpy(full_path + argv_length + 1, file_name);
 
 			FILE *file;
-
+			
 			// if name from client contains a slash, deny that access
 			if (strchr(file_name, '/') != NULL)
 			{
-				print_error(2, socket_file_descriptor, client, len);
+				send_error_to_client(2, socket_file_descriptor, client, len, "Access violation.\0");
 				file = NULL;
 			}
 			else
@@ -115,14 +111,7 @@ int main(int argc, char *argv[])
 
 			if (file == NULL)
 			{
-				char full_message[512];
-				memset(full_message, 0, sizeof full_message);
-				full_message[0] = 0;
-				full_message[1] = 5;
-				full_message[2] = 0;
-				full_message[3] = 1;
-				strcpy(full_message + 4, "File not found.\0");
-				sendto(socket_file_descriptor, full_message, 512, 0, (struct sockaddr *)&client, len);
+				send_error_to_client(1, socket_file_descriptor, client, len, "File not found.\0");
 			}
 			else
 			{
@@ -134,7 +123,7 @@ int main(int argc, char *argv[])
 				int curr_file_size;
 				char full_message[516];
 				int break_next = 0;
-				unsigned short package_nr = 1;
+				unsigned short sent_block_nr = 1;
 				while (1)
 				{
 					int retry_attempts = 5;
@@ -143,8 +132,8 @@ int main(int argc, char *argv[])
 					// construct data pack that will be sent to client
 					full_message[0] = 0;
 					full_message[1] = 3;
-					full_message[2] = package_nr >> 8;
-					full_message[3] = package_nr;
+					full_message[2] = sent_block_nr >> 8;
+					full_message[3] = sent_block_nr;
 					curr_file_size = fread(full_message + 4, 1, 512, file);
 
 					// if file is (near) empty, then last message is sent
@@ -162,20 +151,23 @@ int main(int argc, char *argv[])
 							printf("Error sending message");
 						}
 						ssize_t ack_return_code = recvfrom(socket_file_descriptor, &message, sizeof(message), 0, (struct sockaddr *)&client, &len);
+						unsigned short message_1 = message[2];
+						unsigned short message_2 = message[3] & 0xFF;
+						unsigned short received_block_nr = (message_1 << 8) | message_2;
 
 						if (ack_return_code < 0)
 						{
 							printf("Error with sent message");
 						}
-						else if (message[1] == ACK)
+						else if (message[1] == ACK && received_block_nr == sent_block_nr)
 						{
 							// nothing went wrong so pack was successfully sent
-							package_nr++;
+							sent_block_nr++;
 							break;
 						}
 					}
 
-					if (break_next == 1)
+					if (break_next == 1 || retry_attempts == 0)
 					{
 						break;
 					}
@@ -187,14 +179,8 @@ int main(int argc, char *argv[])
 		else if (message[1] == WRQ)
 		{
 			printf("Write requested, denied!\n");
-			char full_message[512];
-			memset(full_message, 0, sizeof full_message);
-			full_message[0] = 0;
-			full_message[1] = 5;
-			full_message[2] = 0;
-			full_message[3] = 2;
-			strcpy(full_message + 4, "Access violation.\0");
-			sendto(socket_file_descriptor, full_message, 512, 0, (struct sockaddr *)&client, len);
+			send_error_to_client(2, socket_file_descriptor, client, len, "Access violation.\0");
+
 		}
 		fflush(stdout);
 	}
